@@ -1,6 +1,5 @@
-use std::*;
-use num_bigint::*;
-use rand::*;
+use num_bigint::{BigUint, ToBigUint};
+use rand::{rng, Rng};
 
 /*
 struct PublicRsaKey {
@@ -26,7 +25,7 @@ struct BigPair {
 }
 
 pub fn run(bit_length: usize, e: usize) {
-    let pair = generate_p_q(bit_length / 2, e);
+    let pair = gen_rsa_p_q(bit_length / 2, e);
     let p = pair.e1;
     let q = pair.e2;
     let n = &p * &q;
@@ -54,7 +53,7 @@ fn random_range(bit: usize) -> BigUint {
 }
 */
 
-fn generate_p_q(l: usize, e: usize) -> BigPair {
+fn gen_rsa_p_q(l: usize, e: usize) -> BigPair {
     let mut p = random_range_fix(l);
     while !probably_prime(p.clone(), e) {
         p = random_range_fix(l);
