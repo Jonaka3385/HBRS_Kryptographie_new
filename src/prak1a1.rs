@@ -111,3 +111,18 @@ fn probably_prime(n: BigUint, e: usize) -> bool {
     }
     true
 }
+
+/*
+fn rsa_sign(BigUint: m, PrivateRsaKey: priv_key, PublicRsaKey: pub_key) -> BigUint {
+	let sig = m.mod_pow(priv_key.d, pub_key.n);
+    
+    sig
+} // mod_pow???; priv&pub -> full???; rsa keys public (keine Übegabe an methoden)???
+
+fn rsa_verify(BigUint: m, PublicRsaKey: pub_key, BigUint: signature) -> bool {
+	let test_m = signature.mod_pow(pub_key.e, pub_key.n);
+    let v: bool = (m == test_m);
+    
+    v
+}
+*/
