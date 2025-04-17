@@ -45,6 +45,19 @@ fn random_in_fix_length(bit: usize) -> BigUint {
     BigUint::from_bytes_be(&bytes)
 }
 
+fn max_biguint(bit_length: usize) -> BigUint {
+    let count = bit_length / 8;
+    let mut bytes = vec![0u8; count]; // bits / 8 = bytes
+
+    let mut i = 0;
+    while i < count {
+        bytes[i] |= 0x80;
+        i += 1;
+    }
+
+    BigUint::from_bytes_be(&bytes)
+}
+
 /*
 fn random_in_range(bit: usize) -> BigUint {
     let mut rng = rng();
@@ -57,6 +70,8 @@ fn random_in_range(bit: usize) -> BigUint {
 
 fn gen_rsa_keypair(key_length: usize) -> RsaKeyPair {
     let modifier = 7_usize; // everything smaller than 7 takes way too long
+    // 7 -> 1 403 584 rounds
+    // 6 -> 23 548 233 345 728 rounds
     let rounds = calculate_rounds(key_length, modifier);
     let pair = gen_rsa_p_q(&key_length / 2, rounds.clone());
     let p = pair.e1;
@@ -84,7 +99,7 @@ fn calculate_rounds(key_length: usize, probability_modifier: usize) -> BigUint {
         }
         length_to_calc /= v;
     }
-    let tmp = random_in_fix_length(length_to_calc);
+    let tmp = max_biguint(length_to_calc);
     let rounds = &tmp / 6.to_biguint().unwrap();
 
     rounds
