@@ -56,8 +56,8 @@ fn random_in_range(bit: usize) -> BigUint {
 */
 
 fn gen_rsa_keypair(key_length: usize) -> RsaKeyPair {
-    // let rounds = calculate_rounds(key_length, 256);
-    let rounds = 256.to_biguint().unwrap();
+    let modifier = 7_usize; // everything smaller than 7 takes way too long
+    let rounds = calculate_rounds(key_length, modifier);
     let pair = gen_rsa_p_q(&key_length / 2, rounds.clone());
     let p = pair.e1;
     let q = pair.e2;
@@ -72,14 +72,23 @@ fn gen_rsa_keypair(key_length: usize) -> RsaKeyPair {
     RsaKeyPair { public_key, private_key }
 }
 
-/*
 fn calculate_rounds(key_length: usize, probability_modifier: usize) -> BigUint {
-    let tmp = random_in_fix_length(key_length / probability_modifier);
+    let mut length_to_calc = key_length;
+    if probability_modifier == 1 {
+        length_to_calc /= 2;
+    }
+    if probability_modifier != 0 {
+        let v = 2_usize.pow(probability_modifier as u32);
+        if v >= key_length {
+            return 1.to_biguint().unwrap();
+        }
+        length_to_calc /= v;
+    }
+    let tmp = random_in_fix_length(length_to_calc);
     let rounds = &tmp / 6.to_biguint().unwrap();
 
     rounds
 }
-*/
 
 fn gen_rsa_p_q(l: usize, rounds: BigUint) -> BigPair {
     let mut p = random_in_fix_length(l);
@@ -142,7 +151,7 @@ fn probably_prime(n: BigUint, rounds: BigUint) -> bool {
     let mut count = 1.to_biguint().unwrap();
     let border = n.sqrt();
     let mut i = 11.to_biguint().unwrap();
-    while count <= rounds || i < border {
+    while count <= rounds && i < border {
         if &n % &i == big0 || &n % (&i + &big2) == big0 { return false }
         i = i + &big6;
         count = count + &big1
