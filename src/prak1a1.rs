@@ -1,7 +1,6 @@
 use num_bigint::{BigUint, ToBigUint};
 use rand::{rng, Rng};
 
-/*
 struct PublicRsaKey {
     n: BigUint,
     e: BigUint
@@ -13,27 +12,30 @@ struct PrivateRsaKey {
     d: BigUint
 }
 
-struct FullRsaKey {
-    public_rsa_key: PublicRsaKey,
-    private_rsa_key: PrivateRsaKey
+struct RsaKeyPair {
+    public_key: PublicRsaKey,
+    private_key: PrivateRsaKey
 }
-*/
 
 struct BigPair {
     e1: BigUint,
     e2: BigUint
 }
 
-pub fn run(bit_length: usize, e: usize) {
-    let pair = gen_rsa_p_q(bit_length / 2, e);
-    let p = pair.e1;
-    let q = pair.e2;
-    let n = &p * &q;
+pub fn run(key_length: usize) {
+    let rsa_key = gen_rsa_keypair(key_length);
+    let public_key = rsa_key.public_key;
+    let private_key = rsa_key.private_key;
 
-    println!("p:\n{p}\n\nq:\n{q}\n\nn:\n{n}");
+    let m = random_in_fix_length(32);
+    let sig = rsa_sign(&m, &private_key, &public_key);
+    let veri = rsa_verify(&m, &public_key, &sig);
+
+    // println!("p:\n{p}\n\nq:\n{q}\n\nn:\n{n}\n\ne:\n{e}\n\nd:\n{d}\n\n");
+    println!("m:\n{m}\n\nsig:\n{sig}\n\nveri:\n{veri}");
 }
 
-fn random_range_fix(bit: usize) -> BigUint {
+fn random_in_fix_length(bit: usize) -> BigUint {
     let mut rng = rng();
     let mut bytes = vec![0u8; bit / 8]; // bits / 8 = bytes
     rng.fill(&mut bytes[..]);
@@ -44,7 +46,7 @@ fn random_range_fix(bit: usize) -> BigUint {
 }
 
 /*
-fn random_range(bit: usize) -> BigUint {
+fn random_in_range(bit: usize) -> BigUint {
     let mut rng = rng();
     let mut bytes = vec![0u8; bit / 8]; // bits / 8 = bytes
     rng.fill(&mut bytes[..]);
@@ -53,18 +55,56 @@ fn random_range(bit: usize) -> BigUint {
 }
 */
 
-fn gen_rsa_p_q(l: usize, e: usize) -> BigPair {
-    let mut p = random_range_fix(l);
-    while !probably_prime(p.clone(), e) {
-        p = random_range_fix(l);
+fn gen_rsa_keypair(key_length: usize) -> RsaKeyPair {
+    // let rounds = calculate_rounds(key_length, 256);
+    let rounds = 256.to_biguint().unwrap();
+    let pair = gen_rsa_p_q(&key_length / 2, rounds.clone());
+    let p = pair.e1;
+    let q = pair.e2;
+    let n = &p * &q;
+
+    let e = gen_rsa_e();
+    let d = gen_rsa_d();
+
+    let public_key = PublicRsaKey { n, e };
+    let private_key = PrivateRsaKey { p, q, d };
+
+    RsaKeyPair { public_key, private_key }
+}
+
+/*
+fn calculate_rounds(key_length: usize, probability_modifier: usize) -> BigUint {
+    let tmp = random_in_fix_length(key_length / probability_modifier);
+    let rounds = &tmp / 6.to_biguint().unwrap();
+
+    rounds
+}
+*/
+
+fn gen_rsa_p_q(l: usize, rounds: BigUint) -> BigPair {
+    let mut p = random_in_fix_length(l);
+    while !probably_prime(p.clone(), rounds.clone()) {
+        p = random_in_fix_length(l);
     }
 
-    let mut q = random_range_fix(l);
-    while !probably_prime(q.clone(), e) {
-        q = random_range_fix(l);
+    let mut q = random_in_fix_length(l);
+    while !probably_prime(q.clone(), rounds.clone()) {
+        q = random_in_fix_length(l);
     }
 
     BigPair { e1: p, e2: q }
+}
+
+fn gen_rsa_d() -> BigUint {
+    let tmp = 0.to_biguint().unwrap();
+
+    tmp
+}
+
+fn gen_rsa_e() -> BigUint {
+    let tmp = 1.to_biguint().unwrap();
+
+    tmp
 }
 
 /*
@@ -89,22 +129,20 @@ fn is_prime(n: BigUint) -> bool {
 }
 */
 
-fn probably_prime(n: BigUint, e: usize) -> bool {
-    let max = e.to_biguint().unwrap();
+fn probably_prime(n: BigUint, rounds: BigUint) -> bool {
     let big0 = 0.to_biguint().unwrap();
     let big1 = 1.to_biguint().unwrap();
     let big2 = 2.to_biguint().unwrap();
-    let big3 = 3.to_biguint().unwrap();
     let big6 = 6.to_biguint().unwrap();
-    let big9 = 9.to_biguint().unwrap();
 
-    if n == big2 || n == big3 { return true }
+    if n == big2 || n == 3.to_biguint().unwrap() { return true }
     if n < big2 || &n % &big2 == big0 { return false }
-    if n < big9 { return false }
-    if &n % &big3 == big0 { return false }
-    let mut count = big1.clone();
+    if n < 9.to_biguint().unwrap() { return false }
+    if &n % 3.to_biguint().unwrap() == big0 { return false }
+    let mut count = 1.to_biguint().unwrap();
+    let border = n.sqrt();
     let mut i = 11.to_biguint().unwrap();
-    while count <= max {
+    while count <= rounds || i < border {
         if &n % &i == big0 || &n % (&i + &big2) == big0 { return false }
         i = i + &big6;
         count = count + &big1
@@ -112,17 +150,15 @@ fn probably_prime(n: BigUint, e: usize) -> bool {
     true
 }
 
-/*
-fn rsa_sign(BigUint: m, PrivateRsaKey: priv_key, PublicRsaKey: pub_key) -> BigUint {
-	let sig = m.mod_pow(priv_key.d, pub_key.n);
-    
-    sig
-} // mod_pow???; priv&pub -> full???; rsa keys public (keine Übegabe an methoden)???
+fn rsa_sign(message: &BigUint, private_key: &PrivateRsaKey, public_key: &PublicRsaKey) -> BigUint {
+    let signature = message.modpow(&private_key.d, &public_key.n);
 
-fn rsa_verify(BigUint: m, PublicRsaKey: pub_key, BigUint: signature) -> bool {
-	let test_m = signature.mod_pow(pub_key.e, pub_key.n);
-    let v: bool = (m == test_m);
-    
-    v
+    signature
+} // priv&pub -> full???; rsa keys public (keine Übegabe an methoden)???
+
+fn rsa_verify(message: &BigUint, public_key: &PublicRsaKey, signature: &BigUint) -> bool {
+    let verification_message = signature.modpow(&public_key.e, &public_key.n);
+    let verification: bool = message == &verification_message;
+
+    verification
 }
-*/
