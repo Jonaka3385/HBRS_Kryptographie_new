@@ -27,6 +27,13 @@ pub fn run(key_length: usize) {
     let public_key = rsa_key.public_key;
     let private_key = rsa_key.private_key;
 
+    let p = &private_key.p;
+    let q = &private_key.q;
+    let d = &private_key.d;
+    let n = &public_key.n;
+    let e = &public_key.e;
+    println!("p:\n{p},\n\nq:{q},\n\nd:\n{d},\n\nn:\n{n},\n\ne:\n{e}\n\n");
+
     let m = random_in_fix_length(32);
     let sig = rsa_sign(&m, &private_key, &public_key);
     let veri = rsa_verify(&m, &public_key, &sig);
@@ -183,6 +190,7 @@ fn rsa_sign(message: &BigUint, private_key: &PrivateRsaKey, public_key: &PublicR
 fn rsa_verify(message: &BigUint, public_key: &PublicRsaKey, signature: &BigUint) -> bool {
     let verification_message = signature.modpow(&public_key.e, &public_key.n);
     let verification: bool = message == &verification_message;
+    println!("message:\n{message}\n\nverfication message:\n{verification_message}\n");
 
     verification
 }
