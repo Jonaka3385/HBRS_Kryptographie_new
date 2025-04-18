@@ -34,17 +34,17 @@ pub fn run(key_length: usize) {
     let e = &public_key.e;
     println!("p:\n{p},\n\nq:{q},\n\nd:\n{d},\n\nn:\n{n},\n\ne:\n{e}\n\n");
 
-    let m = random_in_fix_length(32);
-    let sig = rsa_sign(&m, &private_key, &public_key);
-    let veri = rsa_verify(&m, &public_key, &sig);
+    let message = random_in_fix_length(1024);
+    let sig = rsa_sign(&message, &public_key, &private_key);
+    let veri = rsa_verify(&message, &public_key, &sig);
 
     // println!("p:\n{p}\n\nq:\n{q}\n\nn:\n{n}\n\ne:\n{e}\n\nd:\n{d}\n\n");
-    println!("m:\n{m}\n\nsig:\n{sig}\n\nveri:\n{veri}");
+    println!("message:\n{message}\n\nsig:\n{sig}\n\nveri:\n{veri}");
 }
 
-fn random_in_fix_length(bit: usize) -> BigUint {
+fn random_in_fix_length(bit_length: usize) -> BigUint {
     let mut rng = rng();
-    let mut bytes = vec![0u8; bit / 8]; // bits / 8 = bytes
+    let mut bytes = vec![0u8; bit_length / 8]; // bits / 8 = bytes
     rng.fill(&mut bytes[..]);
 
     bytes[0] |= 0x80; //first bit 1
@@ -65,28 +65,37 @@ fn max_biguint(bit_length: usize) -> BigUint {
     BigUint::from_bytes_be(&bytes)
 }
 
-/*
-fn random_in_range(bit: usize) -> BigUint {
+fn random_in_range(min: BigUint, max: BigUint) -> BigUint {
+    let bit_length = max.to_bytes_be().len() * 8;
     let mut rng = rng();
-    let mut bytes = vec![0u8; bit / 8]; // bits / 8 = bytes
-    rng.fill(&mut bytes[..]);
 
-    BigUint::from_bytes_be(&bytes)
+    let mut result;
+    loop {
+        let mut bytes = vec![0u8; bit_length / 8]; // bits / 8 = bytes
+        rng.fill(&mut bytes[..]);
+        result = BigUint::from_bytes_be(&bytes);
+        if result > min {
+            break;
+        }
+    }
+
+    result
 }
-*/
 
 fn gen_rsa_keypair(key_length: usize) -> RsaKeyPair {
     let modifier = 7_usize; // everything smaller than 7 takes way too long
-    // 7 -> 1 403 584 rounds
-    // 6 -> 23 548 233 345 728 rounds
+    // 7 -> 1 403 584 rounds fuer 3072 bit
+    // 6 -> 23 548 233 345 728 rounds fuer 3072 bit
     let rounds = calculate_rounds(key_length, modifier);
     let pair = gen_rsa_p_q(&key_length / 2, rounds.clone());
     let p = pair.e1;
     let q = pair.e2;
     let n = &p * &q;
+    let big1 = 1.to_biguint().unwrap();
+    let phi_n = (&p - &big1) * (&q - &big1);
 
-    let e = gen_rsa_e();
-    let d = gen_rsa_d();
+    let e = gen_rsa_e(phi_n.clone());
+    let d = gen_rsa_d(n.clone(), e.clone());
 
     let public_key = PublicRsaKey { n, e };
     let private_key = PrivateRsaKey { p, q, d };
@@ -112,30 +121,37 @@ fn calculate_rounds(key_length: usize, probability_modifier: usize) -> BigUint {
     rounds
 }
 
-fn gen_rsa_p_q(l: usize, rounds: BigUint) -> BigPair {
-    let mut p = random_in_fix_length(l);
+fn gen_rsa_p_q(bit_length: usize, rounds: BigUint) -> BigPair {
+    let mut p = random_in_fix_length(bit_length);
     while !probably_prime(p.clone(), rounds.clone()) {
-        p = random_in_fix_length(l);
+        p = random_in_fix_length(bit_length);
     }
 
-    let mut q = random_in_fix_length(l);
+    let mut q = random_in_fix_length(bit_length);
     while !probably_prime(q.clone(), rounds.clone()) {
-        q = random_in_fix_length(l);
+        q = random_in_fix_length(bit_length);
     }
 
     BigPair { e1: p, e2: q }
 }
 
-fn gen_rsa_d() -> BigUint {
-    let tmp = 0.to_biguint().unwrap();
-
-    tmp
+fn gen_rsa_d(n: BigUint, e: BigUint) -> BigUint {
+    e.modinv(&n).unwrap()
 }
 
-fn gen_rsa_e() -> BigUint {
-    let tmp = 1.to_biguint().unwrap();
+fn gen_rsa_e(phi_n: BigUint) -> BigUint {
+    let big1 = 1.to_biguint().unwrap();
+    let big2 = 2.to_biguint().unwrap();
+    let mut e;
+    let a = &phi_n - &big1;
+    loop {
+        e = random_in_range(big2.clone(), a.clone());
+        if ggt(phi_n.clone(), e.clone()) == big1 {
+            break;
+        }
+    }
 
-    tmp
+    e
 }
 
 /*
@@ -181,16 +197,24 @@ fn probably_prime(n: BigUint, rounds: BigUint) -> bool {
     true
 }
 
-fn rsa_sign(message: &BigUint, private_key: &PrivateRsaKey, public_key: &PublicRsaKey) -> BigUint {
+fn ggt(n1: BigUint, n2: BigUint) -> BigUint {
+    let rest = n1 % &n2;
+    if rest == 0.to_biguint().unwrap() {
+        return n2;
+    }
+    ggt(n2, rest)
+}
+
+fn rsa_sign(message: &BigUint, public_key: &PublicRsaKey, private_key: &PrivateRsaKey) -> BigUint {
     let signature = message.modpow(&private_key.d, &public_key.n);
 
     signature
-} // priv&pub -> full???; rsa keys public (keine Übegabe an methoden)???
+}
 
 fn rsa_verify(message: &BigUint, public_key: &PublicRsaKey, signature: &BigUint) -> bool {
     let verification_message = signature.modpow(&public_key.e, &public_key.n);
-    let verification: bool = message == &verification_message;
-    println!("message:\n{message}\n\nverfication message:\n{verification_message}\n");
+    let verification = message == &verification_message;
+    println!("verfication message:\n{verification_message}\n");
 
     verification
 }
