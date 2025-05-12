@@ -14,6 +14,7 @@ pub fn max_biguint(bit_length: usize) -> BigUint {
     BigUint::from_bytes_be(&bytes)
 }
 
+/*
 pub fn is_prime(n: BigUint) -> bool {
     let big0 = 0.to_biguint().unwrap();
     let big2 = 2.to_biguint().unwrap();
@@ -33,6 +34,7 @@ pub fn is_prime(n: BigUint) -> bool {
     }
     true
 }
+*/
 
 pub fn calculate_rounds(key_length: usize, probability_modifier: usize) -> BigUint {
     let mut length_to_calc = key_length;
