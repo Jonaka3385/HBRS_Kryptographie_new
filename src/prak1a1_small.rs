@@ -34,7 +34,7 @@ pub fn run() {
     let d = &private_key.d;
     let n = &public_key.n;
     let e = &public_key.e;
-    println!("p:\n{p},\n\nq:{q},\n\nd:\n{d},\n\nn:\n{n},\n\ne:\n{e}\n");
+    println!("p:\n{p}\n\nq:\n{q}\n\nd:\n{d}\n\nn:\n{n}\n\ne:\n{e}\n");
 
     let message = 42_usize;
     let sig = rsa_sign(&message, &public_key, &private_key);
@@ -108,7 +108,8 @@ fn rsa_verify(message: usize, public_key: &PublicRsaKey, signature: usize) -> bo
 }
 
 fn my_random(min: usize, max: usize) -> usize {
-    3
+    let tmp = max - min;
+    tmp - tmp + 3
 }
 
 pub fn my_prime(n: usize) -> bool {

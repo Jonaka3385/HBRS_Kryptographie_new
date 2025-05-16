@@ -80,7 +80,7 @@ fn gen_rsa_p_q(bit_length: usize, rounds: BigUint) -> BigPair {
 }
 
 fn gen_rsa_d(n: BigUint, e: BigUint) -> BigUint {
-    e.modinv(&n).unwrap()
+    e.modinv(&n).unwrap_or_default()
 }
 
 fn gen_rsa_e(phi_n: BigUint) -> BigUint {
