@@ -1,6 +1,7 @@
 mod prak1a1;
 mod prak1a2;
 mod biguint_functions;
+mod prak1a1_small;
 
 fn main() {
     println!("-------------------Start-------------------\n");
