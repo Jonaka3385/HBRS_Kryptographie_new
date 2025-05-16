@@ -23,7 +23,7 @@ struct Pair {
 }
 
 pub fn run() {
-    let key_length = 3072;
+    let key_length = 64;
 
     let rsa_key = gen_rsa_keypair(key_length);
     let public_key = rsa_key.public_key;
@@ -45,7 +45,7 @@ pub fn run() {
 }
 
 fn gen_rsa_keypair(key_length: usize) -> RsaKeyPair {
-    let pair = gen_rsa_p_q(&(&key_length / 2));
+    let pair = gen_rsa_p_q((&key_length / 2) as u32);
     let p = pair.e1;
     let q = pair.e2;
     let n = &p * &q;
@@ -60,15 +60,16 @@ fn gen_rsa_keypair(key_length: usize) -> RsaKeyPair {
     RsaKeyPair { public_key, private_key }
 }
 
-fn gen_rsa_p_q(bit_length: &usize) -> Pair {
-    let mut p = random(bit_length);
-    while !prime(p) {
-        p = random(bit_length);
+fn gen_rsa_p_q(bit_length: u32) -> Pair {
+    let max = 2_usize.pow(bit_length);
+    let mut p = my_random(0, max);
+    while !my_prime(p) {
+        p = my_random(0, max);
     }
 
-    let mut q = random(bit_length);
-    while !prime(q) {
-        q = random(bit_length);
+    let mut q = my_random(0, max);
+    while !my_prime(q) {
+        q = my_random(0, max);
     }
 
     Pair { e1: p, e2: q }
@@ -83,7 +84,7 @@ fn gen_rsa_e(phi_n: usize) -> usize {
     let mut e;
     let a = phi_n - 1;
     loop {
-        e = random(2, a);
+        e = my_random(2, a);
         if egcd(phi_n, e).0 == 1 {
             break;
         }
@@ -106,7 +107,11 @@ fn rsa_verify(message: usize, public_key: &PublicRsaKey, signature: usize) -> bo
     verification
 }
 
-pub fn prime(n: usize) -> bool {
+fn my_random(min: usize, max: usize) -> usize {
+    3
+}
+
+pub fn my_prime(n: usize) -> bool {
     if n == 2 || n == 3 { return true }
     if n < 2 || &n % 2 == 0 { return false }
     if n < 9 { return false }
