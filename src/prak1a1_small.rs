@@ -1,5 +1,6 @@
 use modinverse::modinverse;
 use modinverse::egcd;
+use rand::{rng, Rng};
 
 struct PublicRsaKey {
     n: usize,
@@ -23,7 +24,7 @@ struct Pair {
 }
 
 pub fn run() {
-    let key_length = 64;
+    let key_length = 128;
 
     let rsa_key = gen_rsa_keypair(key_length);
     let public_key = rsa_key.public_key;
@@ -38,9 +39,7 @@ pub fn run() {
 
     let message = 42_usize;
     let sig = rsa_sign(&message, &public_key, &private_key);
-    let veri = rsa_verify(message, &public_key, sig);
-
-    // println!("p:\n{p}\n\nq:\n{q}\n\nn:\n{n}\n\ne:\n{e}\n\nd:\n{d}\n\n");
+    let veri = rsa_verify(&message, &public_key, &sig);
     println!("message:\n{message}\n\nsig:\n{sig}\n\nveri:\n{veri}");
 }
 
@@ -61,15 +60,16 @@ fn gen_rsa_keypair(key_length: usize) -> RsaKeyPair {
 }
 
 fn gen_rsa_p_q(bit_length: u32) -> Pair {
-    let max = 2_usize.pow(bit_length);
-    let mut p = my_random(0, max);
+    let min = 2__usize.pow((bit_length / 2) - 1);
+    let max = 2_usize.pow(bit_length - 1);
+    let mut p = my_random(min, max);
     while !my_prime(p) {
-        p = my_random(0, max);
+        p = my_random(min, max);
     }
 
-    let mut q = my_random(0, max);
+    let mut q = my_random(min, max);
     while !my_prime(q) {
-        q = my_random(0, max);
+        q = my_random(min, max);
     }
 
     Pair { e1: p, e2: q }
@@ -94,22 +94,20 @@ fn gen_rsa_e(phi_n: usize) -> usize {
 }
 
 fn rsa_sign(message: &usize, public_key: &PublicRsaKey, private_key: &PrivateRsaKey) -> usize {
-    let signature = message.pow(private_key.d as u32) % public_key.n;
-
-    signature
+    message.pow(private_key.d as u32) % public_key.n
 }
 
-fn rsa_verify(message: usize, public_key: &PublicRsaKey, signature: usize) -> bool {
+fn rsa_verify(message: &usize, public_key: &PublicRsaKey, signature: &usize) -> bool {
     let verification_message = signature.pow(public_key.e as u32) % public_key.n;
-    let verification = message == verification_message;
     println!("verfication message:\n{verification_message}\n");
 
-    verification
+    *message == verification_message
 }
 
 fn my_random(min: usize, max: usize) -> usize {
-    let tmp = max - min;
-    tmp - tmp + 3
+    let mut rng = rng();
+    let tmp = rng.random_range(min..max);
+    tmp
 }
 
 pub fn my_prime(n: usize) -> bool {
